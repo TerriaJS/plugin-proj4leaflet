@@ -1,0 +1,35 @@
+{
+  "name": "terriajs-plugin-proj4leaflet",
+  "version": "0.0.1-alpha.2",
+  "description": "A TerriaJS plugin using proj4leaflet library to implement custom projection support in Leaflet/2D mode.",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "files": ["dist"],
+  "scripts": {
+    "watch": "rollup -c rollup.config.js -w",
+    "build": "rollup -c rollup.config.js"
+  },
+  "peerDependencies": {
+    "leaflet": "*",
+    "mobx": "*",
+    "mobx-utils": "*",
+    "mobx-react": "*",
+    "proj4": "*",
+    "proj4js-definitions": "*",
+    "styled-components": "*",
+    "terriajs": "*",
+    "terriajs-cesium": "*",
+    "terriajs-plugin-api": "*"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@types/proj4leaflet": "^1.0.10",
+    "rollup": "^4.40.0"
+  },
+  "dependencies": {
+    "proj4leaflet": "^1.0.2"
+  }
+}
