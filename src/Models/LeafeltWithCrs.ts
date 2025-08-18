@@ -1,5 +1,5 @@
 import L from "leaflet";
-import { computed, override } from "mobx";
+import { action, computed, override } from "mobx";
 import "proj4leaflet";
 import Cartographic from "terriajs-cesium/Source/Core/Cartographic";
 import CesiumMath from "terriajs-cesium/Source/Core/Math";
@@ -121,9 +121,13 @@ export function leafletWithCrs(
           // been added or removed. So use leaflet events instead of mobx
           // reaction() to update the bounds.
           this.map
-            .on("layeradd", () => this.updateMaxBounds(this.itemBounds, crs))
-            .on("layerremove", () =>
-              this.updateMaxBounds(this.itemBounds, crs)
+            .on(
+              "layeradd",
+              action(() => this.updateMaxBounds(this.itemBounds, crs))
+            )
+            .on(
+              "layerremove",
+              action(() => this.updateMaxBounds(this.itemBounds, crs))
             );
         });
       }
