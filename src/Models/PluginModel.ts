@@ -1,6 +1,18 @@
-import { computed, makeObservable, reaction, when } from "mobx";
+import {
+  computed,
+  makeObservable,
+  reaction,
+  runInAction,
+  toJS,
+  when
+} from "mobx";
 import { fromPromise } from "mobx-utils";
-import { CreateModel, ViewerMode } from "terriajs-plugin-api";
+import {
+  CatalogMemberMixin,
+  CreateModel,
+  Terria,
+  ViewerMode
+} from "terriajs-plugin-api";
 import TilingSchemeGenerator from "terriajs/lib/Map/ImageryProvider/TilingSchemeGenerator";
 import LoadableStratum from "terriajs/lib/Models/Definition/LoadableStratum";
 import {
@@ -11,6 +23,7 @@ import StratumOrder from "terriajs/lib/Models/Definition/StratumOrder";
 import createStratumInstance from "terriajs/lib/Models/Definition/createStratumInstance";
 import PreviewViewer from "terriajs/lib/ViewModels/PreviewViewer";
 import TerriaViewer from "terriajs/lib/ViewModels/TerriaViewer";
+import BaseMapsStratum from "./BaseMapsStratum";
 import {
   CustomCrsTilingSchemeName,
   isCrsHandledByTerria,
@@ -23,6 +36,7 @@ import PluginModelTraits, {
   CrsDefinitionTraits
 } from "./PluginModelTraits";
 import { defaultCrsDefinitions } from "./defaultCrsDefinitions";
+import GenericModelStratum from "./GenericModelStratum";
 
 // Lazy load leafelt but keep alive
 const leafletCrsPromise = computed(
@@ -57,6 +71,10 @@ export default class PluginModel extends CreateModel(PluginModelTraits) {
     }
   }
 
+  static getInstance(terria: Terria): PluginModel | undefined {
+    return terria.getModelById(PluginModel, PluginModel.type);
+  }
+
   /**
    * Setup overrides (only when the plugin is enabled)
    *
@@ -73,6 +91,7 @@ export default class PluginModel extends CreateModel(PluginModelTraits) {
         this.registerTilingSchemeGenerator();
         this.overrideLeafletViewer();
         this.overrideCrsModels();
+        this.overrideBaseMapsModel();
       }
     );
   }
@@ -121,24 +140,23 @@ export default class PluginModel extends CreateModel(PluginModelTraits) {
 
       const { leafletWithCrs, buildProjCrs } = await leafletCrsPromise.get();
 
-      const projCrs =
-        mapCrs && !isCrsHandledByTerria(mapCrs)
-          ? buildProjCrs(
-              mapCrs,
-              this.crsDefinitions.find((def) => def.crs === mapCrs)
-            )
-          : undefined;
-
-      if (!projCrs) {
-        return originalPromise;
-      }
-
-      return originalPromise.then((Leaflet) => {
-        return leafletWithCrs(
-          Leaflet,
-          projCrs,
-          this.crsDefinitions.find((def) => def.crs === mapCrs)
+      return runInAction(() => {
+        const mapCrsDefinition = this.crsDefinitions.find(
+          (def) => def.crs === mapCrs
         );
+
+        const projCrs =
+          mapCrs && !isCrsHandledByTerria(mapCrs)
+            ? buildProjCrs(mapCrs, mapCrsDefinition)
+            : undefined;
+
+        if (!projCrs) {
+          return originalPromise;
+        }
+
+        return originalPromise.then((Leaflet) => {
+          return leafletWithCrs(Leaflet, projCrs, mapCrsDefinition);
+        });
       });
     };
   }
@@ -166,11 +184,36 @@ export default class PluginModel extends CreateModel(PluginModelTraits) {
                 model.strata.delete(CrsModelStratum.stratumName);
               }
             }
+          } else if (CatalogMemberMixin.isMixedInto(model)) {
+            if (this.enabled) {
+              // Add stratum to model if it does not exist
+              if (!model.strata.has(GenericModelStratum.stratumName)) {
+                model.strata.set(
+                  GenericModelStratum.stratumName,
+                  new GenericModelStratum(model, this)
+                );
+              }
+            } else {
+              // Remove stratum if plugin is disabled
+              if (model.strata.has(GenericModelStratum.name)) {
+                model.strata.delete(GenericModelStratum.stratumName);
+              }
+            }
           }
         });
       },
       { fireImmediately: true }
     );
+  }
+
+  private overrideBaseMapsModel() {
+    const baseMaps = this.terria.baseMapsModel;
+    if (!baseMaps.strata.has(BaseMapsStratum.stratumName)) {
+      baseMaps.strata.set(
+        BaseMapsStratum.stratumName,
+        new BaseMapsStratum(baseMaps)
+      );
+    }
   }
 
   @computed

@@ -1,15 +1,20 @@
 import { computed } from "mobx";
 import proj4 from "proj4";
-import { BaseModel, ViewerMode } from "terriajs-plugin-api";
+import { BaseModel, CatalogMemberMixin, ViewerMode } from "terriajs-plugin-api";
 import LoadableStratum from "terriajs/lib/Models/Definition/LoadableStratum";
 import StratumOrder from "terriajs/lib/Models/Definition/StratumOrder";
 import createStratumInstance from "terriajs/lib/Models/Definition/createStratumInstance";
-import { RectangleTraits } from "terriajs/lib/Traits/TraitsClasses/MappableTraits";
+import { InfoSectionTraits } from "terriajs/lib/Traits/TraitsClasses/CatalogMemberTraits";
+import {
+  InitialMessageTraits,
+  RectangleTraits
+} from "terriajs/lib/Traits/TraitsClasses/MappableTraits";
 import {
   CrsModel,
   CrsModelTraits,
   CustomCrsTilingSchemeName,
-  isCrsHandledByTerria
+  isCrsHandledByTerria,
+  isCrsModel
 } from "./Crs";
 import PluginModel from "./PluginModel";
 
@@ -21,7 +26,7 @@ import PluginModel from "./PluginModel";
  * status here.
  */
 export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
-  static stratumName = "customCrsModelStratum";
+  static stratumName = "proj4leaflet-customCrsModelStratum";
 
   readonly model: CrsModel;
   readonly plugin: PluginModel;
@@ -43,6 +48,11 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
   @computed
   get tilingSchemeGenerator() {
     return CustomCrsTilingSchemeName;
+  }
+
+  @computed
+  private get skipOverrides(): boolean {
+    return this.model.terria.mainViewer.viewerMode !== ViewerMode.Leaflet;
   }
 
   /**
@@ -87,6 +97,18 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
     return supportedCrs;
   }
 
+  @computed
+  get previewCaption() {
+    const previewCrs = this.previewCrs;
+    if (previewCrs) {
+      const crsName = this.plugin.crsDefinitions.find(
+        (def) => def.crs === previewCrs
+      )?.name;
+      const title = crsName ? `${crsName} (${previewCrs})` : previewCrs;
+      return `Preview projection: ${title}`;
+    }
+  }
+
   /**
    * Preferred viewer mode
    *
@@ -114,7 +136,7 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
    */
   @computed
   get clipToRectangle() {
-    if (!this.plugin.enabled) return;
+    if (this.skipOverrides) return;
 
     const crs = this.model.crs;
     const definition = this.plugin.crsDefinitions.find(
@@ -177,6 +199,112 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
       east: max.x,
       north: max.y
     });
+  }
+
+  @computed
+  get initialMessage() {
+    if (this.skipOverrides) return;
+
+    const modelCrs = this.model.crs;
+    const mapCrs = this.plugin.currentCrs;
+    if (modelCrs && modelCrs !== mapCrs) {
+      return createStratumInstance(InitialMessageTraits, {
+        key: this.model.uniqueId,
+        content: `One or more datasets were added that do not support the current base map projection (${mapCrs}) and cannot be displayed.`,
+        showAsToast: true,
+        toastVisibleDuration: 15
+      });
+    }
+  }
+
+  @computed
+  get shortReport() {
+    if (this.skipOverrides) return;
+
+    const modelCrs = this.model.crs;
+    const mapCrs = this.plugin.currentCrs;
+    if (modelCrs && modelCrs !== mapCrs) {
+      return `<b>⚠️ Invalid projection</b><p>This dataset does not support the current base map projection (${mapCrs}) and cannot be displayed. Select a <terriatooltip title="supported base map">choose from Map Settings menu</terriatooltip> to view the dataset.</p>`;
+    }
+  }
+
+  @computed
+  get info() {
+    if (this.skipOverrides) return;
+
+    return [
+      createStratumInstance(InfoSectionTraits, {
+        name: "Map Settings (recommended)",
+        content:
+          "See below for the recommended Map Settings to support optimal viewing of this dataset. Other combinations may result in this dataset experiencing distortions or not displaying on the map.",
+        contentAsObject: {
+          "Map View": "2D",
+          "Base Map(s)":
+            this.compatibleBaseMapNames.join(", ") || "None available"
+        }
+      })
+    ];
+  }
+
+  @computed
+  private get compatibleBaseMapNames(): string[] {
+    const allBaseMaps = this.model.terria.baseMapsModel.baseMapItems.map(
+      (b) => b.item
+    );
+    const compatibleBaseMaps: string[] = [];
+
+    for (let i = 0; i < allBaseMaps.length; i++) {
+      const baseMap = allBaseMaps[i];
+      if (
+        isCrsModel(baseMap) &&
+        baseMap.crs &&
+        this.model.availableCrs.includes(baseMap.crs)
+      ) {
+        if (CatalogMemberMixin.isMixedInto(baseMap) && baseMap.name) {
+          compatibleBaseMaps.push(`${baseMap.name} (${baseMap.crs})`);
+        }
+      }
+    }
+
+    return compatibleBaseMaps;
+  }
+
+  @computed
+  get disableZoomTo() {
+    if (this.skipOverrides) return;
+
+    return this.isIncompatibleBaseMap;
+  }
+
+  @computed
+  get disableOpacityControl() {
+    if (this.skipOverrides) return;
+
+    return this.isIncompatibleBaseMap;
+  }
+
+  @computed
+  get hideLegendInWorkbench() {
+    if (this.skipOverrides) return;
+
+    return this.isIncompatibleBaseMap;
+  }
+
+  @computed
+  get disableSplitter() {
+    if (this.skipOverrides) return;
+
+    return this.isIncompatibleBaseMap;
+  }
+
+  /**
+   * Returns true if the model is incompatible with the active base map
+   */
+  @computed
+  private get isIncompatibleBaseMap(): boolean {
+    const modelCrs = this.model.crs;
+    const mapCrs = this.plugin.currentCrs;
+    return modelCrs !== mapCrs;
   }
 }
 

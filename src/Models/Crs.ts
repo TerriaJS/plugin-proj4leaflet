@@ -12,6 +12,7 @@ import CrsTraits, {
   SUPPORTED_CRS_4326
 } from "terriajs/lib/Traits/TraitsClasses/CrsTraits";
 import ImageryProviderTraits from "terriajs/lib/Traits/TraitsClasses/ImageryProviderTraits";
+import LegendOwnerTraits from "terriajs/lib/Traits/TraitsClasses/LegendOwnerTraits";
 
 export const CustomCrsTilingSchemeName = "customCrsTilingScheme";
 
@@ -21,7 +22,8 @@ export class CrsModelTraits extends mixTraits(
   CrsTraits,
   MappableTraits,
   ImageryProviderTraits,
-  CatalogMemberTraits
+  CatalogMemberTraits,
+  LegendOwnerTraits
 ) {}
 
 export function isCrsModel(model: any): model is CrsModel {
