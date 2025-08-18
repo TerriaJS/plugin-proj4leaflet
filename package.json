@@ -1,6 +1,6 @@
 {
   "name": "terriajs-plugin-proj4leaflet",
-  "version": "0.0.1-alpha.2",
+  "version": "0.0.1-alpha.3",
   "description": "A TerriaJS plugin using proj4leaflet library to implement custom projection support in Leaflet/2D mode.",
   "license": "Apache-2.0",
   "main": "dist/index.js",
