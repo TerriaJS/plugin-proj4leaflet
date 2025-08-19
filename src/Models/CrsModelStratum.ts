@@ -224,7 +224,7 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
     const modelCrs = this.model.crs;
     const mapCrs = this.plugin.currentCrs;
     if (modelCrs && modelCrs !== mapCrs) {
-      return `<b>⚠️ Invalid projection</b><p>This dataset does not support the current base map projection (${mapCrs}) and cannot be displayed. Select a <terriatooltip title="supported base map">choose from Map Settings menu</terriatooltip> to view the dataset.</p>`;
+      return `<b>⚠️ Invalid projection</b><p>This dataset does not support the current base map projection (${mapCrs}) and cannot be displayed. Select a <settingspanel title="Open settings panel" search="foobarbaz">supported base map</settingspanel> to view the dataset.</p>`;
     }
   }
 
