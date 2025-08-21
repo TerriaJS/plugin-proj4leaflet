@@ -1,11 +1,4 @@
-import {
-  computed,
-  makeObservable,
-  reaction,
-  runInAction,
-  toJS,
-  when
-} from "mobx";
+import { computed, makeObservable, reaction, runInAction, when } from "mobx";
 import { fromPromise } from "mobx-utils";
 import {
   CatalogMemberMixin,
@@ -31,12 +24,12 @@ import {
   isKnownCrs
 } from "./Crs";
 import CrsModelStratum from "./CrsModelStratum";
+import GenericModelStratum from "./GenericModelStratum";
 import PluginModelTraits, {
   BASEMAP_CRS,
   CrsDefinitionTraits
 } from "./PluginModelTraits";
 import { defaultCrsDefinitions } from "./defaultCrsDefinitions";
-import GenericModelStratum from "./GenericModelStratum";
 
 // Lazy load leafelt but keep alive
 const leafletCrsPromise = computed(
@@ -172,32 +165,18 @@ export default class PluginModel extends CreateModel(PluginModelTraits) {
           if (isCrsModel(model)) {
             if (this.enabled) {
               // Add stratum to model if it does not exist
-              if (!model.strata.has(CrsModelStratum.stratumName)) {
-                model.strata.set(
-                  CrsModelStratum.stratumName,
-                  new CrsModelStratum(model, this)
-                );
-              }
+              CrsModelStratum.ensureStratum(model, this);
             } else {
               // Remove stratum if plugin is disabled
-              if (model.strata.has(CrsModelStratum.name)) {
-                model.strata.delete(CrsModelStratum.stratumName);
-              }
+              CrsModelStratum.removeStratum(model);
             }
           } else if (CatalogMemberMixin.isMixedInto(model)) {
             if (this.enabled) {
               // Add stratum to model if it does not exist
-              if (!model.strata.has(GenericModelStratum.stratumName)) {
-                model.strata.set(
-                  GenericModelStratum.stratumName,
-                  new GenericModelStratum(model, this)
-                );
-              }
+              GenericModelStratum.ensureStratum(model, this);
             } else {
               // Remove stratum if plugin is disabled
-              if (model.strata.has(GenericModelStratum.name)) {
-                model.strata.delete(GenericModelStratum.stratumName);
-              }
+              GenericModelStratum.removeStratum(model);
             }
           }
         });

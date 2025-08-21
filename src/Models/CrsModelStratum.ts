@@ -17,6 +17,7 @@ import {
   isCrsModel
 } from "./Crs";
 import PluginModel from "./PluginModel";
+import { WorkbenchControls } from "terriajs/lib/ReactViews/Workbench/Controls/WorkbenchControls";
 
 /**
  * Provides overrides for traits of a CrsModel
@@ -42,6 +43,19 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
     return new CrsModelStratum(newModel as CrsModel, this.plugin) as this;
   }
 
+  static ensureStratum(model: CrsModel, plugin: PluginModel) {
+    if (!model.strata.has(CrsModelStratum.stratumName)) {
+      model.strata.set(
+        CrsModelStratum.stratumName,
+        new CrsModelStratum(model, plugin)
+      );
+    }
+  }
+
+  static removeStratum(model: CrsModel) {
+    model.strata.delete(CrsModelStratum.stratumName);
+  }
+
   /**
    * Use custom tiling scheme generator
    */
@@ -51,8 +65,15 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
   }
 
   @computed
-  private get skipOverrides(): boolean {
+  private get is2dMode(): boolean {
     return this.model.terria.mainViewer.viewerMode !== ViewerMode.Leaflet;
+  }
+
+  @computed
+  private get isCompatibleMapCrs(): boolean {
+    const modelCrs = this.model.crs;
+    const mapCrs = this.plugin.currentCrs;
+    return modelCrs === mapCrs;
   }
 
   /**
@@ -136,7 +157,7 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
    */
   @computed
   get clipToRectangle() {
-    if (this.skipOverrides) return;
+    if (this.is2dMode) return;
 
     const crs = this.model.crs;
     const definition = this.plugin.crsDefinitions.find(
@@ -203,7 +224,7 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
 
   @computed
   get initialMessage() {
-    if (this.skipOverrides) return;
+    if (this.is2dMode) return;
 
     const modelCrs = this.model.crs;
     const mapCrs = this.plugin.currentCrs;
@@ -219,7 +240,7 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
 
   @computed
   get shortReport() {
-    if (this.skipOverrides) return;
+    if (this.is2dMode) return;
 
     const modelCrs = this.model.crs;
     const mapCrs = this.plugin.currentCrs;
@@ -230,7 +251,7 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
 
   @computed
   get info() {
-    if (this.skipOverrides) return;
+    if (this.is2dMode) return;
 
     return [
       createStratumInstance(InfoSectionTraits, {
@@ -270,41 +291,14 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
   }
 
   @computed
-  get disableZoomTo() {
-    if (this.skipOverrides) return;
+  get workbenchControls(): WorkbenchControls | undefined {
+    if (this.is2dMode || this.isCompatibleMapCrs) return;
 
-    return this.isIncompatibleBaseMap;
-  }
-
-  @computed
-  get disableOpacityControl() {
-    if (this.skipOverrides) return;
-
-    return this.isIncompatibleBaseMap;
-  }
-
-  @computed
-  get hideLegendInWorkbench() {
-    if (this.skipOverrides) return;
-
-    return this.isIncompatibleBaseMap;
-  }
-
-  @computed
-  get disableSplitter() {
-    if (this.skipOverrides) return;
-
-    return this.isIncompatibleBaseMap;
-  }
-
-  /**
-   * Returns true if the model is incompatible with the active base map
-   */
-  @computed
-  private get isIncompatibleBaseMap(): boolean {
-    const modelCrs = this.model.crs;
-    const mapCrs = this.plugin.currentCrs;
-    return modelCrs !== mapCrs;
+    return {
+      disableAll: true,
+      shortReport: true,
+      aboutData: true
+    };
   }
 }
 
