@@ -24,7 +24,7 @@ import {
   isKnownCrs
 } from "./Crs";
 import CrsModelStratum from "./CrsModelStratum";
-import GenericModelStratum from "./GenericModelStratum";
+import UnsupportedModelStratum from "./UnsupportedModelStratum";
 import PluginModelTraits, {
   BASEMAP_CRS,
   CrsDefinitionTraits
@@ -173,10 +173,10 @@ export default class PluginModel extends CreateModel(PluginModelTraits) {
           } else if (CatalogMemberMixin.isMixedInto(model)) {
             if (this.enabled) {
               // Add stratum to model if it does not exist
-              GenericModelStratum.ensureStratum(model, this);
+              UnsupportedModelStratum.ensureStratum(model, this);
             } else {
               // Remove stratum if plugin is disabled
-              GenericModelStratum.removeStratum(model);
+              UnsupportedModelStratum.removeStratum(model);
             }
           }
         });

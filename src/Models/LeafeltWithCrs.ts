@@ -85,13 +85,16 @@ export function leafletWithCrs(
 
       const mapCrs = crs.code;
       const previewBaseMap = this.terria.baseMapsModel.baseMapItems.find(
-        (it) =>
-          it.item.uniqueId === options.previewBaseMapId &&
-          isCrsModel(it.item) &&
-          it.item.crs === mapCrs
+        (it) => {
+          return (
+            it.item.uniqueId === options.previewBaseMapId &&
+            isCrsModel(it.item) &&
+            it.item.crs === mapCrs
+          );
+        }
       )?.item;
 
-      // load the basemap - not recommended to do inside a computed!
+      // load the basemap - not recommended inside a computed!
       previewBaseMap?.loadMapItems();
       return previewBaseMap;
     }
@@ -378,7 +381,7 @@ export function leafletWithCrs(
         return;
       }
 
-      const tilingScheme = imageryProvider?.tilingScheme;
+      const tilingScheme = imageryProvider.tilingScheme;
       const layerCrs =
         TilingSchemeGenerator.getCustomCrs(tilingScheme) ?? "EPSG:3857";
 
@@ -397,7 +400,7 @@ export function leafletWithCrs(
           if (!previewImageryProvider) {
             // ignore layer
             console.log(
-              `Ignoring layer with CRS (${layerCrs}) that does not match map CRS (${mapCrs})`
+              `Ignoring layer (${item.uniqueId}) with CRS (${layerCrs}) that does not match map CRS (${mapCrs})`
             );
             return;
           }
@@ -406,7 +409,7 @@ export function leafletWithCrs(
         } else {
           // ignore layer
           console.log(
-            `Ignoring layer with CRS (${layerCrs}) that does not match map CRS (${mapCrs})`
+            `Ignoring layer (${item.uniqueId}) with CRS (${layerCrs}) that does not match map CRS (${mapCrs})`
           );
           return;
         }

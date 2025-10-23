@@ -11,10 +11,13 @@ import { WorkbenchControls } from "terriajs/lib/ReactViews/Workbench/Controls/Wo
 import { isCrsHandledByTerria } from "./Crs";
 import PluginModel from "./PluginModel";
 
-export default class GenericModelStratum extends LoadableStratum(
+/**
+ * Stratum for models that do not support the active projection
+ */
+export default class UnsupportedModelStratum extends LoadableStratum(
   CatalogMemberTraits
 ) {
-  static stratumName = "proj4Leaflet-genericModelStratum";
+  static stratumName = "proj4Leaflet-unsupportedModelStratum";
 
   readonly model: CatalogMemberMixin.Instance;
   readonly plugin: PluginModel;
@@ -26,7 +29,7 @@ export default class GenericModelStratum extends LoadableStratum(
   }
 
   duplicateLoadableStratum(newModel: BaseModel): this {
-    return new GenericModelStratum(
+    return new UnsupportedModelStratum(
       newModel as CatalogMemberMixin.Instance,
       this.plugin
     ) as this;
@@ -36,16 +39,16 @@ export default class GenericModelStratum extends LoadableStratum(
     model: CatalogMemberMixin.Instance,
     plugin: PluginModel
   ) {
-    if (!model.strata.has(GenericModelStratum.stratumName)) {
+    if (!model.strata.has(UnsupportedModelStratum.stratumName)) {
       model.strata.set(
-        GenericModelStratum.stratumName,
-        new GenericModelStratum(model, plugin)
+        UnsupportedModelStratum.stratumName,
+        new UnsupportedModelStratum(model, plugin)
       );
     }
   }
 
   static removeStratum(model: CatalogMemberMixin.Instance) {
-    model.strata.delete(GenericModelStratum.stratumName);
+    model.strata.delete(UnsupportedModelStratum.stratumName);
   }
 
   @computed
@@ -64,7 +67,7 @@ export default class GenericModelStratum extends LoadableStratum(
   }
 
   @computed
-  get workbenchControls(): WorkbenchControls | undefined {
+  get workbenchControls(): Partial<WorkbenchControls> | undefined {
     if (!this.isMapUsingCustomCrs) return;
 
     // disable all workbench controls except short report and about data
@@ -84,4 +87,4 @@ export default class GenericModelStratum extends LoadableStratum(
   }
 }
 
-StratumOrder.addLoadStratum(GenericModelStratum.stratumName);
+StratumOrder.addLoadStratum(UnsupportedModelStratum.stratumName);
