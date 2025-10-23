@@ -4,6 +4,7 @@ import { BaseModel, CatalogMemberMixin, ViewerMode } from "terriajs-plugin-api";
 import LoadableStratum from "terriajs/lib/Models/Definition/LoadableStratum";
 import StratumOrder from "terriajs/lib/Models/Definition/StratumOrder";
 import createStratumInstance from "terriajs/lib/Models/Definition/createStratumInstance";
+import { WorkbenchControls } from "terriajs/lib/ReactViews/Workbench/Controls/WorkbenchControls";
 import { InfoSectionTraits } from "terriajs/lib/Traits/TraitsClasses/CatalogMemberTraits";
 import {
   InitialMessageTraits,
@@ -17,7 +18,6 @@ import {
   isCrsModel
 } from "./Crs";
 import PluginModel from "./PluginModel";
-import { WorkbenchControls } from "terriajs/lib/ReactViews/Workbench/Controls/WorkbenchControls";
 
 /**
  * Provides overrides for traits of a CrsModel
@@ -66,7 +66,7 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
 
   @computed
   private get is2dMode(): boolean {
-    return this.model.terria.mainViewer.viewerMode !== ViewerMode.Leaflet;
+    return this.model.terria.mainViewer.viewerMode === ViewerMode.Leaflet;
   }
 
   @computed
@@ -157,7 +157,7 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
    */
   @computed
   get clipToRectangle() {
-    if (this.is2dMode) return;
+    if (!this.is2dMode) return;
 
     const crs = this.model.crs;
     const definition = this.plugin.crsDefinitions.find(
@@ -224,34 +224,28 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
 
   @computed
   get initialMessage() {
-    if (this.is2dMode) return;
+    if (!this.is2dMode || this.isCompatibleMapCrs) return;
 
-    const modelCrs = this.model.crs;
     const mapCrs = this.plugin.currentCrs;
-    if (modelCrs && modelCrs !== mapCrs) {
-      return createStratumInstance(InitialMessageTraits, {
-        key: this.model.uniqueId,
-        content: `One or more datasets were added that do not support the current base map projection (${mapCrs}) and cannot be displayed.`,
-        showAsToast: true,
-        toastVisibleDuration: 15
-      });
-    }
+    return createStratumInstance(InitialMessageTraits, {
+      key: this.model.uniqueId,
+      content: `One or more datasets were added that do not support the current base map projection (${mapCrs}) and cannot be displayed.`,
+      showAsToast: true,
+      toastVisibleDuration: 15
+    });
   }
 
   @computed
   get shortReport() {
-    if (this.is2dMode) return;
+    if (!this.is2dMode || this.isCompatibleMapCrs) return;
 
-    const modelCrs = this.model.crs;
     const mapCrs = this.plugin.currentCrs;
-    if (modelCrs && modelCrs !== mapCrs) {
-      return `<b>⚠️ Invalid projection</b><p>This dataset does not support the current base map projection (${mapCrs}) and cannot be displayed. Select a <settingspanel title="Open Map Settings">supported base map</settingspanel> to view the dataset.</p>`;
-    }
+    return `<b>⚠️ Invalid projection</b><p>This dataset does not support the current base map projection (${mapCrs}) and cannot be displayed. Select a <settingspanel title="Open Map Settings">supported base map</settingspanel> to view the dataset.</p>`;
   }
 
   @computed
   get info() {
-    if (this.is2dMode) return;
+    if (!this.is2dMode) return;
 
     return [
       createStratumInstance(InfoSectionTraits, {
@@ -291,8 +285,8 @@ export default class CrsModelStratum extends LoadableStratum(CrsModelTraits) {
   }
 
   @computed
-  get workbenchControls(): WorkbenchControls | undefined {
-    if (this.is2dMode || this.isCompatibleMapCrs) return;
+  get workbenchControls(): Partial<WorkbenchControls> | undefined {
+    if (!this.is2dMode || this.isCompatibleMapCrs) return;
 
     return {
       disableAll: true,
